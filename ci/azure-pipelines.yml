@@ -1,0 +1,61 @@
+trigger:
+- master
+
+pr:
+- master
+
+variables:
+  # Turn this Powershell console into a developer powershell console.
+  # https://intellitect.com/enter-vsdevshell-powershell/
+  PWSH_DEV: |
+    $installPath = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
+    $devShell    = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
+    Import-Module $devShell
+    Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
+
+stages:
+- stage: Test
+  jobs:
+    - job: T
+      strategy:
+       matrix:
+         Win_MVM:
+           IMAGE_NAME: 'windows-2019'
+         Mac_MVM:
+           IMAGE_NAME: 'macOS-10.15'
+         Lin_MVM:
+           IMAGE_NAME: 'ubuntu-18.04'
+      pool:
+        vmImage: $(IMAGE_NAME)
+      workspace:
+        clean: all
+      timeoutInMinutes: 180
+      steps:
+        - pwsh: |
+            $shortened_path = "$(PATH)" -replace ';[^;]*(SeleniumWebDrivers|SQL Server|Mercurial|Amazon|mysql|\\sbt\\|NSIS|Windows Performance Toolkit|php|Subversion)[^;]*(?=(;|$))', ''
+            echo "##vso[task.setvariable variable=PATH]$shortened_path"
+          displayName: "Shorten PATH on Windows"
+          condition: eq( variables['Agent.OS'], 'Windows_NT' )
+        - script: |
+            curl https://rakubrew.org/install-on-perl.sh -o install-on-perl.sh
+            sh install-on-perl.sh
+            eval "$(/$HOME/.rakubrew/bin/rakubrew init Bash)"
+            rakubrew download
+            raku -I. bin/zef --version
+            raku -I. xt/install.t
+            raku -I. xt/repository.t
+          condition: ne( variables['Agent.OS'], 'Windows_NT' )
+          displayName: Test Zef
+        - pwsh: |
+            ${{ variables.PWSH_DEV }}
+            $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest https://rakubrew.org/install-on-powershell.ps1 -OutFile install-on-powershell.ps1
+            powershell .\install-on-powershell.ps1
+            New-Item -Path (Split-Path $PROFILE) -ItemType "Directory" -Force
+            Add-Content -Force -Path $PROFILE -Value '. "C:\rakubrew\bin\rakubrew.exe" init PowerShell | Out-String | Invoke-Expression'
+            rakubrew download
+            raku -I. bin/zef --version
+            raku -I. xt/install.t
+            raku -I. xt/repository.t
+          failOnStderr: false
+          condition: eq( variables['Agent.OS'], 'Windows_NT' )
+          displayName: Test Zef (Windows)
