@@ -94,7 +94,7 @@ class Zef::Extract does Extractor does Pluggable {
 
     #| A helper method to deliver the 'missing backends' suggestions for extractors
     method !extractors($path --> Array[Extractor]) {
-        my @extractors = self!extract-matcher($path).cache;
+        my @extractors = self!extract-matcher($path);
 
         unless +@extractors {
             my @report_enabled  = self.plugins.map(*.short-name);

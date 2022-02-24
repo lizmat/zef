@@ -85,7 +85,7 @@ class Zef::Fetch does Fetcher does Pluggable {
     #| Will return the first successful result while attempting to fetch the given $candi.
     method fetch(Candidate $candi, IO() $save-to, Supplier :$logger, Int :$timeout --> IO::Path) {
         my $uri      = $candi.uri;
-        my @fetchers = self!fetch-matcher($uri).cache;
+        my @fetchers = self!fetch-matcher($uri);
 
         unless +@fetchers {
             my @report_enabled  = self.plugins.map(*.short-name);

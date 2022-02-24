@@ -61,9 +61,9 @@ class Zef::Report does Pluggable does Reporter {
 
     #| Report basic information about this Candidate to a temp file
     method report(Candidate $candi, Supplier :$logger) {
-        my $reporters := self.plugins.grep(*.so).cache;
+        my @reporters = self.plugins.grep(*.so);
 
-        my @reports = $reporters.map: -> $reporter {
+        my @reports = @reporters.map: -> $reporter {
             if ?$logger {
                 $logger.emit({ level => DEBUG, stage => REPORT, phase => START, candi => $candi, message => "Reporting with plugin: {$reporter.^name}" });
                 $reporter.stdout.Supply.grep(*.defined).act: -> $out { $logger.emit({ level => VERBOSE, stage => REPORT, phase => LIVE, candi => $candi, message => $out }) }
