@@ -61,10 +61,11 @@ class Zef::Service::Shell::curl does Fetcher does Probeable does Messenger {
 
     =end pod
 
+    my Bool $probe-cache;
 
     #| Return true if the `curl` command is available to use
     method probe(--> Bool:D) {
-        state $probe = try { Zef::zrun('curl', '--help', :!out, :!err).so };
+        $probe-cache //= try { Zef::zrun('curl', '--help', :!out, :!err).so };
     }
 
     #| Return true if this Fetcher understands the given uri/path

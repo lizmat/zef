@@ -65,38 +65,36 @@ class Zef::Service::Shell::prove does Tester does Messenger {
 
     =end pod
 
+    my Bool $probe-cache;
 
     #| Return true if the `prove` command is available to use
-    method probe(--> Bool:D) {
-        state $probe;
-        once {
-            if $*EXECUTABLE.absolute.contains(" ") {
-                # prove can't deal with spaces in the executable path.
-                # It assumes everything after the first space to be args to the
-                # executable. So we can't use prove if our executables path
-                # contains a space. Sad.
-                # https://metacpan.org/dist/Test-Harness/view/bin/prove#-exec
-                return False
-            }
-            # `prove --help` has exitcode == 1 unlike most other processes
-            # so it requires a more convoluted probe check
-            try {
-                my $proc = $*DISTRO.is-win
-                    ?? Zef::zrun('prove.bat', '--help', :out, :!err)
-                    !! Zef::zrun('prove', '--help', :out, :!err);
-                my @out  = $proc.out.lines;
-                $proc.out.close;
-                CATCH {
-                    when X::Proc::Unsuccessful {
-                        $probe = True if $proc.exitcode == 1 && @out.first(*.contains("-exec" | "Mac OS X"));
-                    }
-                    default { return False }
+    method probe(--> Bool:D) { $probe-cache //= self!probe() }
+
+    method !probe(--> Bool:D) {
+        if $*EXECUTABLE.absolute.contains(" ") {
+            # prove can't deal with spaces in the executable path.
+            # It assumes everything after the first space to be args to the
+            # executable. So we can't use prove if our executables path
+            # contains a space. Sad.
+            # https://metacpan.org/dist/Test-Harness/view/bin/prove#-exec
+            return False
+        }
+        # `prove --help` has exitcode == 1 unlike most other processes
+        # so it requires a more convoluted probe check
+        try {
+            my $proc = $*DISTRO.is-win
+                ?? Zef::zrun('prove.bat', '--help', :out, :!err)
+                !! Zef::zrun('prove', '--help', :out, :!err);
+            my @out  = $proc.out.lines;
+            $proc.out.close;
+            CATCH {
+                when X::Proc::Unsuccessful {
+                    return True if $proc.exitcode == 1 && @out.first(*.contains("-exec" | "Mac OS X"));
                 }
+                default { return False }
             }
         }
-        ?$probe;
     }
-
     #| Return true if this Tester understands the given uri/path
     method test-matcher(Str() $uri --> Bool:D) { return $uri.IO.e }
 

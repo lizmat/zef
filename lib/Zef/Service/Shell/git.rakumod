@@ -95,9 +95,11 @@ class Zef::Service::Shell::git does Fetcher does Extractor does Probeable does M
     #| This is for overriding the uri scheme used for git, i.e. force https:// over git://
     has Str $.scheme;
 
+    my Bool $probe-cache;
+
     #| Return true if the `git` command is available to use
     method probe(--> Bool:D) {
-        state $probe = try { run('git', '--help', :!out, :!err).so };
+        $probe-cache //= try { Zef::zrun('git', '--help', :!out, :!err).so };
     }
 
     #| Return true if this Fetcher understands the given uri/path

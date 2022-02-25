@@ -61,10 +61,11 @@ class Zef::Service::Shell::wget does Fetcher does Probeable does Messenger {
 
     =end pod
 
+    my Bool $probe-cache;
 
     #} Return true if the `wget` command is available to use
     method probe(--> Bool:D) {
-        state $probe = try { Zef::zrun('wget', '--help', :!out, :!err).so };
+        $probe-cache //= try { Zef::zrun('wget', '--help', :!out, :!err).so };
     }
 
     #| Return true if this Fetcher understands the given uri/path

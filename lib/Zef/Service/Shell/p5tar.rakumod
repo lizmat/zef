@@ -69,10 +69,11 @@ class Zef::Service::Shell::p5tar does Extractor does Messenger {
 
     =end pod
 
+    my Bool $probe-cache;
 
     #| Returns true if the included Perl script can be executed
     method probe(--> Bool:D) {
-        state $probe = try { Zef::zrun('perl', %?RESOURCES<scripts/perl5tar.pl>.IO.absolute, '--help', :!out, :!err).so };
+        $probe-cache //= try { Zef::zrun('perl', %?RESOURCES<scripts/perl5tar.pl>.IO.absolute, '--help', :!out, :!err).so };
     }
 
     #| Return true if this Extractor understands the given uri/path
