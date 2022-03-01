@@ -94,7 +94,7 @@ class Zef::Service::Shell::tar does Extractor does Messenger {
         react {
             my $cwd := $archive-file.parent;
             my $ENV := %*ENV;
-            my $proc = Zef::zrun-async('tar', '-zxvf', $archive-file.basename, '-C', $extract-to.relative($cwd));
+            my $proc = Zef::zrun-async('tar', '-zxvf', self!cli-path($archive-file.basename), '-C', self!cli-path($extract-to.relative($cwd)));
             whenever $proc.stdout(:bin) { }
             whenever $proc.stderr(:bin) { }
             whenever $proc.start(:$ENV, :$cwd) { $passed = $_.so }
@@ -113,7 +113,7 @@ class Zef::Service::Shell::tar does Extractor does Messenger {
         react {
             my $cwd := $archive-file.parent;
             my $ENV := %*ENV;
-            my $proc = Zef::zrun-async('tar', '--list', '-f', $archive-file.basename);
+            my $proc = Zef::zrun-async('tar', '--list', '-f', self!cli-path($archive-file.basename));
             whenever $proc.stdout(:bin) { $output.append($_) }
             whenever $proc.stderr(:bin) { }
             whenever $proc.start(:$ENV, :$cwd) { $passed = $_.so }
@@ -121,5 +121,13 @@ class Zef::Service::Shell::tar does Extractor does Messenger {
 
         my @extracted-paths = $output.decode.lines;
         $passed ?? @extracted-paths.grep(*.defined) !! ();
+    }
+
+    # Workaround for https://github.com/ugexe/zef/issues/444
+    # May need to be tweaked in the future for e.g. Windows volumes.
+    # Expects $path to already be a relative path string (not an absolute path)
+    method !cli-path(Str $path --> Str) {
+        return $path if <./ ../ .\\ ..\\>.grep({ $path.starts-with($_) });
+        return './' ~ $path;
     }
 }
